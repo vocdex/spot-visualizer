@@ -1,6 +1,5 @@
 // src/services/api.js
-const API_BASE_URL = 'http://localhost:5000/api';
-
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
 /**
  * Fetch the map data from the server
  * @param {boolean} useAnchoring - Whether to use anchoring mode
@@ -8,11 +7,28 @@ const API_BASE_URL = 'http://localhost:5000/api';
  */
 export const fetchMap = async (useAnchoring = false) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/map?use_anchoring=${useAnchoring}`);
+    console.log(`Fetching map data with useAnchoring=${useAnchoring}`);
+    const url = `${API_BASE_URL}/map?use_anchoring=${useAnchoring}`;
+    console.log(`Request URL: ${url}`);
+    
+    const response = await fetch(url);
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      let errorMessage = `HTTP error! Status: ${response.status}`;
+      try {
+        // Try to get more detailed error from response
+        const errorBody = await response.text();
+        console.error(`Error response body: ${errorBody}`);
+        errorMessage += `, Details: ${errorBody}`;
+      } catch (parseError) {
+        console.error('Could not parse error response:', parseError);
+      }
+      throw new Error(errorMessage);
     }
-    return await response.json();
+    
+    const data = await response.json();
+    console.log(`Successfully retrieved map with ${data.waypoints?.length || 0} waypoints`);
+    return data;
   } catch (error) {
     console.error('Error fetching map data:', error);
     throw error;
@@ -27,7 +43,8 @@ export const fetchWaypoints = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/waypoints`);
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      const errorBody = await response.text();
+      throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorBody}`);
     }
     return await response.json();
   } catch (error) {
@@ -46,7 +63,8 @@ export const fetchWaypoint = async (waypointId, useAnchoring = false) => {
   try {
     const response = await fetch(`${API_BASE_URL}/waypoint/${waypointId}?use_anchoring=${useAnchoring}`);
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      const errorBody = await response.text();
+      throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorBody}`);
     }
     return await response.json();
   } catch (error) {
@@ -64,7 +82,8 @@ export const fetchWaypointImages = async (waypointId) => {
   try {
     const response = await fetch(`${API_BASE_URL}/waypoint/${waypointId}/images`);
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      const errorBody = await response.text();
+      throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorBody}`);
     }
     return await response.json();
   } catch (error) {
@@ -81,7 +100,8 @@ export const fetchObjects = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/objects`);
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      const errorBody = await response.text();
+      throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorBody}`);
     }
     return await response.json();
   } catch (error) {
@@ -106,7 +126,8 @@ export const updateWaypointLabel = async (waypointId, newLabel) => {
       body: JSON.stringify({ label: newLabel }),
     });
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      const errorBody = await response.text();
+      throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorBody}`);
     }
     return await response.json();
   } catch (error) {

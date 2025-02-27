@@ -13,10 +13,21 @@ from bosdyn.client.math_helpers import SE3Pose
 from io import BytesIO
 from PIL import Image
 from scipy import ndimage
+from flask import Flask, send_from_directory
+from bosdyn.api import image_pb2
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+app = Flask(__name__, static_folder='../spot-map-visualizer/build')
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(app.static_folder + '/' + path):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+    
 class SpotMapAPI:
     """API class to handle GraphNav map data and provide endpoints for React frontend."""
     
@@ -388,63 +399,117 @@ class SpotMapAPI:
 # Initialize API instance
 api_instance = None
 
+
 @app.route('/api/map', methods=['GET'])
 def get_map():
-    """Get the map data."""
-    use_anchoring = request.args.get('use_anchoring', 'false').lower() == 'true'
-    return jsonify(api_instance.get_map_data(use_anchoring))
+    """Get the map data with enhanced error handling."""
+    try:
+        print(f"Map path: {api_instance.map_path}")
+        print(f"Number of waypoints: {len(api_instance.waypoints)}")
+        print(f"Number of edges: {len(api_instance.graph.edges)}")
+        
+        use_anchoring = request.args.get('use_anchoring', 'false').lower() == 'true'
+        print(f"Fetching map data with use_anchoring={use_anchoring}")
+        
+        data = api_instance.get_map_data(use_anchoring)
+        print(f"Successfully retrieved map with {len(data['waypoints'])} waypoints")
+        
+        return jsonify(data)
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Error in get_map: {str(e)}")
+        print(f"Traceback: {error_traceback}")
+        return jsonify({"error": str(e), "traceback": error_traceback}), 500
 
 @app.route('/api/waypoints', methods=['GET'])
 def get_waypoints():
-    """Get a list of all waypoints."""
-    waypoints = [
-        {
-            "id": wp.id, 
-            "label": wp.annotations.name or "", 
-            "has_snapshot": bool(wp.snapshot_id)
-        } 
-        for wp in api_instance.graph.waypoints
-    ]
-    return jsonify(waypoints)
+    """Get a list of all waypoints with enhanced error handling."""
+    try:
+        waypoints = [
+            {
+                "id": wp.id, 
+                "label": wp.annotations.name or "", 
+                "has_snapshot": bool(wp.snapshot_id)
+            } 
+            for wp in api_instance.graph.waypoints
+        ]
+        print(f"Successfully retrieved {len(waypoints)} waypoints")
+        return jsonify(waypoints)
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Error in get_waypoints: {str(e)}")
+        print(f"Traceback: {error_traceback}")
+        return jsonify({"error": str(e), "traceback": error_traceback}), 500
 
 @app.route('/api/waypoint/<waypoint_id>', methods=['GET'])
 def get_waypoint(waypoint_id):
-    """Get detailed information about a specific waypoint."""
-    if waypoint_id not in api_instance.waypoints:
-        return jsonify({"error": "Waypoint not found"}), 404
-    
-    waypoint = api_instance.waypoints[waypoint_id]
-    
-    # Get position in the selected coordinate frame
-    use_anchoring = request.args.get('use_anchoring', 'false').lower() == 'true'
-    transforms = api_instance.anchored_transforms if use_anchoring else api_instance.global_transforms
-    
-    position = None
-    if waypoint_id in transforms:
-        world_transform = transforms[waypoint_id]
-        position = world_transform[:3, 3].tolist()
-    
-    # Get annotation data
-    objects = []
-    if waypoint_id in api_instance.waypoint_annotations:
-        ann = api_instance.waypoint_annotations[waypoint_id]
-        if "views" in ann:
-            for view_type, view_data in ann["views"].items():
-                visible = view_data.get("visible_objects", [])
-                for obj in visible:
-                    clean_obj = api_instance._clean_text(obj)
-                    if clean_obj not in objects:
-                        objects.append(clean_obj)
-    
-    result = {
-        "id": waypoint_id,
-        "label": waypoint.annotations.name or "",
-        "snapshot_id": waypoint.snapshot_id,
-        "position": position,
-        "objects": objects
-    }
-    
-    return jsonify(result)
+    """Get detailed information about a specific waypoint with enhanced error handling."""
+    try:
+        if waypoint_id not in api_instance.waypoints:
+            print(f"Waypoint not found: {waypoint_id}")
+            return jsonify({"error": "Waypoint not found"}), 404
+        
+        waypoint = api_instance.waypoints[waypoint_id]
+        print(f"Retrieved waypoint: {waypoint_id}")
+        
+        # Get position in the selected coordinate frame
+        use_anchoring = request.args.get('use_anchoring', 'false').lower() == 'true'
+        transforms = api_instance.anchored_transforms if use_anchoring else api_instance.global_transforms
+        
+        position = None
+        if waypoint_id in transforms:
+            world_transform = transforms[waypoint_id]
+            position = world_transform[:3, 3].tolist()
+        
+        # Get annotation data
+        objects = []
+        if waypoint_id in api_instance.waypoint_annotations:
+            ann = api_instance.waypoint_annotations[waypoint_id]
+            if "views" in ann:
+                for view_type, view_data in ann["views"].items():
+                    visible = view_data.get("visible_objects", [])
+                    for obj in visible:
+                        clean_obj = api_instance._clean_text(obj)
+                        if clean_obj not in objects:
+                            objects.append(clean_obj)
+        
+        result = {
+            "id": waypoint_id,
+            "label": waypoint.annotations.name or "",
+            "snapshot_id": waypoint.snapshot_id,
+            "position": position,
+            "objects": objects
+        }
+        
+        return jsonify(result)
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Error in get_waypoint: {str(e)}")
+        print(f"Traceback: {error_traceback}")
+        return jsonify({"error": str(e), "traceback": error_traceback}), 500
+
+@app.route('/api/check', methods=['GET'])
+def check_api():
+    """Simple endpoint to check if the API is working."""
+    try:
+        map_info = {
+            "status": "ok",
+            "map_path": api_instance.map_path,
+            "waypoints_count": len(api_instance.waypoints),
+            "edges_count": len(api_instance.graph.edges),
+            "snapshots_count": len(api_instance.snapshots),
+            "objects_count": len(api_instance.all_objects)
+        }
+        return jsonify(map_info)
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Error in check_api: {str(e)}")
+        print(f"Traceback: {error_traceback}")
+        return jsonify({"error": str(e), "traceback": error_traceback}), 500
 
 @app.route('/api/waypoint/<waypoint_id>/images', methods=['GET'])
 def get_waypoint_images(waypoint_id):
