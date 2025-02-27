@@ -16,8 +16,11 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
     }
   }, [allObjects, filteredObjects, onObjectFilter]);
   
-  // Handle checkbox change
-  const handleObjectToggle = (object) => {
+  // Handle checkbox change with scroll prevention
+  const handleObjectToggle = (e, object) => {
+    // Prevent default behavior to stop page scrolling
+    e.preventDefault();
+    
     try {
       console.log(`Toggling object: ${object}`);
       
@@ -43,8 +46,11 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
     }
   };
   
-  // Clear all filters
-  const handleClearFilters = () => {
+  // Clear all filters with scroll prevention
+  const handleClearFilters = (e) => {
+    // Prevent default behavior to stop page scrolling
+    e.preventDefault();
+    
     console.log("Clearing all filters");
     onObjectFilter([]);
   };
@@ -91,11 +97,19 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
       <div className="object-list">
         {safeAllObjects.map((object) => (
           <div key={object} className="object-item">
-            <label className="checkbox-label">
+            <label 
+              className="checkbox-label"
+              onClick={(e) => {
+                // Stop propagation to prevent any parent elements from receiving the click
+                e.stopPropagation();
+              }}
+            >
               <input
                 type="checkbox"
                 checked={safeFilteredObjects.includes(object)}
-                onChange={() => handleObjectToggle(object)}
+                onChange={(e) => handleObjectToggle(e, object)}
+                // Add this to prevent default scrolling behavior on input change
+                onClick={(e) => e.stopPropagation()}
               />
               <span className="checkbox-custom"></span>
               <span className="object-name">{object}</span>
