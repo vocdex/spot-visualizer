@@ -161,7 +161,6 @@ class SpotMapAPI:
             visited[curr_waypoint.id] = True
             global_transforms[curr_waypoint.id] = world_tform_current
             
-            # Process all edges
             for edge in self.graph.edges:
                 # Handle forward edges
                 if edge.id.from_waypoint == curr_waypoint.id and edge.id.to_waypoint not in visited:
@@ -183,38 +182,28 @@ class SpotMapAPI:
         """Compute transforms for waypoints using seed frame anchoring."""
         anchored_transforms = {}
         
-        # Process each waypoint that has an anchor
         for waypoint_id, anchor in self.anchors.items():
-            # Get the transform from seed frame to waypoint
             seed_tform_waypoint = SE3Pose.from_proto(anchor.seed_tform_waypoint).to_matrix()
             anchored_transforms[waypoint_id] = seed_tform_waypoint
         
         return anchored_transforms
     
-    def get_map_data(self, use_anchoring=False):
+    def get_map_data(self, use_anchoring=True):
         """Get the map data in a format suitable for frontend visualization."""
-        # Choose which transforms to use
         transforms = self.anchored_transforms if use_anchoring else self.global_transforms
         
         waypoints_data = []
         edges_data = []
         objects_data = []
         
-        # Process waypoints
         for waypoint in self.graph.waypoints:
             if waypoint.id not in transforms:
                 continue
                 
-            # Get the transform for this waypoint
             world_transform = transforms[waypoint.id]
             position = world_transform[:3, 3]
             
-            # Get rotation as quaternion for 3D visualization
-            rotation_matrix = world_transform[:3, :3]
-            # This is a simplified quaternion conversion - a proper implementation would use a library
-            # like scipy.spatial.transform.Rotation or custom quaternion conversion code
-            
-            # Get waypoint data
+           
             waypoint_data = {
                 "id": waypoint.id,
                 "position": [float(position[0]), float(position[1]), float(position[2])],
@@ -223,7 +212,6 @@ class SpotMapAPI:
                 "has_images": waypoint.snapshot_id in self.snapshots
             }
             
-            # Add annotation data if available
             if waypoint.id in self.waypoint_annotations:
                 objects = []
                 ann = self.waypoint_annotations[waypoint.id]
@@ -239,7 +227,6 @@ class SpotMapAPI:
             
             waypoints_data.append(waypoint_data)
         
-        # Process edges
         for edge in self.graph.edges:
             if edge.id.from_waypoint in transforms and edge.id.to_waypoint in transforms:
                 from_transform = transforms[edge.id.from_waypoint]
@@ -332,16 +319,12 @@ class SpotMapAPI:
                 dtype = np.uint16
             extension = ".jpg"
 
-        # Convert image data to numpy array
         img = np.frombuffer(image_data.data, dtype=dtype)
 
-        # Reshape or decode the image
         if image_data.format == image_pb2.Image.FORMAT_RAW:
             try:
-                # Attempt to reshape array into rows x cols x channels
                 img = img.reshape((image_data.rows, image_data.cols, num_channels))
             except ValueError:
-                # If reshaping fails, use OpenCV decode
                 img = cv2.imdecode(img, -1)
         else:
             img = cv2.imdecode(img, -1)
@@ -358,14 +341,11 @@ class SpotMapAPI:
     def _encode_image_to_base64(self, cv_image):
         """Convert OpenCV image to base64 string with consistent compression."""
         try:
-            # Check if image is grayscale (1 channel)
             if len(cv_image.shape) == 2 or (len(cv_image.shape) == 3 and cv_image.shape[2] == 1):
-                # For grayscale, directly convert to PIL
                 if len(cv_image.shape) == 3:
                     cv_image = cv_image.squeeze()  # Remove single-dimension
                 image = Image.fromarray(cv_image, mode='L')
             else:
-                # For color images, convert BGR to RGB
                 image = Image.fromarray(cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB))
             
             buffered = BytesIO()
@@ -395,7 +375,6 @@ class SpotMapAPI:
         except Exception as e:
             return False, f"Error updating label: {str(e)}"
 
-# Initialize API instance
 api_instance = None
 
 
@@ -409,7 +388,6 @@ def get_map():
         
         use_anchoring = request.args.get('use_anchoring', 'false').lower() == 'true'
         print(f"Fetching map data with use_anchoring={use_anchoring}")
-        
         data = api_instance.get_map_data(use_anchoring)
         print(f"Successfully retrieved map with {len(data['waypoints'])} waypoints")
         
@@ -545,8 +523,8 @@ def run_server(map_path, rag_path, port=5000):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--map-path", type=str, default="./assets/maps/chair_v3")
-    parser.add_argument("--rag-path", type=str, default="./assets/database/chair_v3")
+    parser.add_argument("--map-path", type=str, default="./assets/maps/chair_v3", help="Path to GraphNav map folder")
+    parser.add_argument("--rag-path", type=str, default="./assets/database/chair_v3", help="Path to RAG database folder")
     parser.add_argument("--port", type=int, default=5000)
     args = parser.parse_args()
     run_server(args.map_path, args.rag_path, args.port)
