@@ -4,9 +4,26 @@ This application helps visualize and interact with Spot robot's GraphNav maps. I
 
 1. **Flask Backend**: Processes and serves GraphNav map data
 2. **React Frontend**: Provides an interactive 2D visualization of the map along with recorded waypoint snapshots(images) and Retrieval Augmented Graph (RAG) database
+### Screenshots
+<br />
+<p align="center"> Raw Map Visualization</p>
+<p align="center">
+  <img src="static/raw_map.png" width="500" title="Raw Map">
+</p>
+<br/>
+<br />
+<p align="center"> Object Filtered Map </p>
+<p align="center">
+  <img src="static/object_filtered.png" width="500" title="Object Filtered">
+</p>
+<br />
+<br />
+<p align="center" >Waypoint Details with Camera Images </p>
 
-![Spot Map Visualizer](./spot-map-visualizer/assets/spot_visualizer.gif)
-
+<p align="center">
+  <img src="static/camera_views_graph.png" width="500" title="Camera Views">
+</p>
+<br />
 
 ## Running the Application
 
@@ -18,7 +35,10 @@ This application helps visualize and interact with Spot robot's GraphNav maps. I
    ```
 
 2. Run the Flask server:
+
    ```python
+   cd backend
+
    python app.py --map-path /path/to/map --rag-path /path/to/rag_db --port 5000
    ```
 In **map-path**, we expect a folder containing GraphNav map files:
@@ -36,7 +56,7 @@ To build such a database, please refer to the main project repository at [Spotty
 
 1. Navigate to the React app directory:
    ```bash
-   cd spot-map-visualizer
+   cd frontend
    ```
 
 2. Install dependencies:
