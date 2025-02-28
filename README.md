@@ -1,4 +1,4 @@
-# Spot Map Visualizer - Project Guide
+# Spot Map Visualizer
 
 This application helps visualize and interact with Spot robot's GraphNav maps. It consists of:
 
@@ -21,7 +21,7 @@ This application helps visualize and interact with Spot robot's GraphNav maps. I
    ```python
    python app.py --map-path /path/to/map --rag-path /path/to/rag_db --port 5000
    ```
-In **map-path**, we expect a folder containing GraphNav map files: 
+In **map-path**, we expect a folder containing GraphNav map files:
 - `graph`
 - `edge_snapshots`
 - `waypoint_snapshots`

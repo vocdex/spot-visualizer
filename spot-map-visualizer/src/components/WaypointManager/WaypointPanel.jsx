@@ -7,7 +7,7 @@ const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
   const [newLabel, setNewLabel] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [expandedImage, setExpandedImage] = useState(null);
-  
+
   // Reset the edit state when waypoint changes
   useEffect(() => {
     if (waypointData) {
@@ -16,31 +16,31 @@ const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
       setExpandedImage(null);
     }
   }, [waypointData]);
-  
+
   // Handle saving the new label
   const handleSave = () => {
     if (!waypointData || !newLabel.trim()) return;
-    
+
     onLabelUpdate(waypointData.id, newLabel.trim());
     setIsEditing(false);
   };
-  
+
   // Handle canceling the edit
   const handleCancel = () => {
     setNewLabel(waypointData?.label || '');
     setIsEditing(false);
   };
-  
+
   // Handle image click to expand
   const handleImageClick = (type) => {
     setExpandedImage(expandedImage === type ? null : type);
   };
-  
+
   // Close expanded image
   const closeExpandedImage = () => {
     setExpandedImage(null);
   };
-  
+
   // If no waypoint is selected
   if (!waypointData) {
     return (
@@ -50,15 +50,15 @@ const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
       </div>
     );
   }
-  
+
   return (
     <div className="waypoint-panel">
       <h2>Waypoint Information</h2>
-      
+
       <div className="waypoint-id">
         <strong>ID:</strong> {waypointData.id}
       </div>
-      
+
       <div className="waypoint-label">
         <strong>Label:</strong>
         {isEditing ? (
@@ -81,7 +81,7 @@ const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
           </div>
         )}
       </div>
-      
+
       {waypointData.objects && waypointData.objects.length > 0 && (
         <div className="waypoint-objects">
           <strong>Visible Objects:</strong>
@@ -92,33 +92,33 @@ const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
           </ul>
         </div>
       )}
-      
+
       {/* Camera view images - now at the top with thumbnails */}
       {waypointImages && (
         <div className="waypoint-images">
           <h3>Camera Views</h3>
           <div className="image-thumbnails">
             {waypointImages.left && (
-              <div 
+              <div
                 className={`image-thumbnail ${expandedImage === 'left' ? 'selected' : ''}`}
                 onClick={() => handleImageClick('left')}
               >
-                <img 
-                  src={formatImageUrl(waypointImages.left)} 
-                  alt="Left View" 
+                <img
+                  src={formatImageUrl(waypointImages.left)}
+                  alt="Left View"
                 />
                 <span>Left View</span>
               </div>
             )}
-            
+
             {waypointImages.right && (
-              <div 
+              <div
                 className={`image-thumbnail ${expandedImage === 'right' ? 'selected' : ''}`}
                 onClick={() => handleImageClick('right')}
               >
-                <img 
-                  src={formatImageUrl(waypointImages.right)} 
-                  alt="Right View" 
+                <img
+                  src={formatImageUrl(waypointImages.right)}
+                  alt="Right View"
                 />
                 <span>Right View</span>
               </div>
@@ -126,14 +126,14 @@ const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
           </div>
         </div>
       )}
-      
+
       {/* Expanded image modal */}
       {expandedImage && waypointImages && waypointImages[expandedImage] && (
         <div className="expanded-image-overlay" onClick={closeExpandedImage}>
           <div className="expanded-image-container" onClick={(e) => e.stopPropagation()}>
             <button className="close-button" onClick={closeExpandedImage}>×</button>
             <h3>{expandedImage === 'left' ? 'Left View' : 'Right View'}</h3>
-            <img 
+            <img
               src={formatImageUrl(waypointImages[expandedImage])}
               alt={`${expandedImage} View`}
               className="expanded-image"

@@ -11,7 +11,7 @@ import { fetchMap, fetchWaypoint, fetchWaypointImages, fetchObjects, updateWaypo
 // Simple Debug View Component
 const SimpleMapView = ({ mapData }) => {
   if (!mapData) return <div>No map data available</div>;
-  
+
   return (
     <div style={{ padding: '20px' }}>
       <h3>Simple Map View</h3>
@@ -74,7 +74,7 @@ const DebugPanel = () => {
   const [apiStatus, setApiStatus] = useState('Checking...');
   const [mapData, setMapData] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
-  
+
   useEffect(() => {
     // Test direct fetch without using the service
     const testApi = async () => {
@@ -84,7 +84,7 @@ const DebugPanel = () => {
           setApiStatus(`API Error: ${response.status}`);
           return;
         }
-        
+
         const data = await response.json();
         setApiStatus(`API OK: Found ${data.waypoints?.length || 0} waypoints`);
         setMapData(data);
@@ -92,15 +92,15 @@ const DebugPanel = () => {
         setApiStatus(`Fetch Error: ${error.message}`);
       }
     };
-    
+
     testApi();
   }, []);
-  
+
   return (
-    <div style={{ 
-      padding: '5px 10px', 
-      background: mapData ? '#e8f5e9' : '#ffebee', 
-      margin: '0 0 5px 0', 
+    <div style={{
+      padding: '5px 10px',
+      background: mapData ? '#e8f5e9' : '#ffebee',
+      margin: '0 0 5px 0',
       borderBottom: '1px solid #ddd',
       fontSize: '12px',
       display: 'flex',
@@ -127,18 +127,18 @@ function App() {
   const [error, setError] = useState(null);
   const [dataValid, setDataValid] = useState(true);
   const [useDebugView, setUseDebugView] = useState(false);
-  
+
   // State for UI controls
   const [useAnchoring, setUseAnchoring] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
-  
+
   // State for waypoint selection and filtering
   const [selectedWaypoint, setSelectedWaypoint] = useState(null);
   const [selectedWaypointData, setSelectedWaypointData] = useState(null);
   const [waypointImages, setWaypointImages] = useState(null);
   const [allObjects, setAllObjects] = useState([]);
   const [filteredObjects, setFilteredObjects] = useState([]);
-  
+
   // Load initial map data
   useEffect(() => {
     console.log("Fetching map data...");
@@ -157,31 +157,31 @@ function App() {
         setLoading(false);
       });
   }, [useAnchoring]);
-  
+
   // Validate map data
   useEffect(() => {
     // Validate map data structure
     if (mapData) {
       console.log("Validating map data:", mapData);
-      
+
       if (!mapData.waypoints || !Array.isArray(mapData.waypoints)) {
         console.error("Invalid waypoints data:", mapData.waypoints);
         setDataValid(false);
         setError("Invalid waypoints data structure");
         return;
       }
-      
+
       if (!mapData.edges || !Array.isArray(mapData.edges)) {
         console.error("Invalid edges data:", mapData.edges);
         setDataValid(false);
         setError("Invalid edges data structure");
         return;
       }
-      
+
       setDataValid(true);
     }
   }, [mapData]);
-  
+
   // Load all available objects for filtering
   useEffect(() => {
     fetchObjects()
@@ -193,7 +193,7 @@ function App() {
         console.error('Error loading objects:', err);
       });
   }, []);
-  
+
   // When a waypoint is selected, fetch its details
   useEffect(() => {
     if (!selectedWaypoint) {
@@ -201,7 +201,7 @@ function App() {
       setWaypointImages(null);
       return;
     }
-    
+
     // Fetch waypoint data
     fetchWaypoint(selectedWaypoint, useAnchoring)
       .then(data => {
@@ -211,7 +211,7 @@ function App() {
       .catch(err => {
         console.error('Error loading waypoint data:', err);
       });
-    
+
     // Fetch waypoint images
     fetchWaypointImages(selectedWaypoint)
       .then(images => {
@@ -222,13 +222,13 @@ function App() {
         console.error('Error loading waypoint images:', err);
       });
   }, [selectedWaypoint, useAnchoring]);
-  
+
   // Handle waypoint selection
   const handleWaypointSelect = (waypointId) => {
     console.log("Waypoint selected:", waypointId);
     setSelectedWaypoint(waypointId);
   };
-  
+
   // Handle label update
   const handleLabelUpdate = (waypointId, newLabel) => {
     console.log(`Updating label for waypoint ${waypointId} to "${newLabel}"`);
@@ -241,7 +241,7 @@ function App() {
             label: newLabel
           }));
         }
-        
+
         // Refresh map data
         return fetchMap(useAnchoring);
       })
@@ -252,52 +252,52 @@ function App() {
         console.error('Error updating label:', err);
       });
   };
-  
+
   // Handle object filtering
   const handleObjectFilter = (objects) => {
     console.log("Filtering objects:", objects);
     setFilteredObjects(objects);
   };
-  
+
   // Handle toggle of anchoring mode
   const handleAnchoringToggle = () => {
     console.log("Toggling anchoring mode");
     setUseAnchoring(!useAnchoring);
   };
-  
+
   // Handle toggle of label visibility
   const handleLabelToggle = () => {
     console.log("Toggling label visibility");
     setShowLabels(!showLabels);
   };
-  
-  
+
+
   return (
     <div className="app">
-     <Header 
-        useAnchoring={useAnchoring} 
+     <Header
+        useAnchoring={useAnchoring}
         onAnchoringToggle={handleAnchoringToggle}
         showLabels={showLabels}
         onLabelToggle={handleLabelToggle}
       />
-      
+
       <DebugPanel />
-      
+
       <div className="main-content">
         <Sidebar>
-          <ObjectFilterPanel 
+          <ObjectFilterPanel
             allObjects={allObjects}
             filteredObjects={filteredObjects}
             onObjectFilter={handleObjectFilter}
           />
-          
-          <WaypointPanel 
+
+          <WaypointPanel
             waypointData={selectedWaypointData}
             waypointImages={waypointImages}
             onLabelUpdate={handleLabelUpdate}
           />
         </Sidebar>
-        
+
         <div className="map-container">
           <ErrorBoundary>
             {loading ? (
@@ -305,7 +305,7 @@ function App() {
             ) : error ? (
               <div className="error">
                 <p>{error}</p>
-                <button 
+                <button
                   onClick={() => {
                     setError(null);
                     setLoading(true);
@@ -332,8 +332,8 @@ function App() {
                 <pre style={{ fontSize: '12px', overflow: 'auto', maxHeight: '300px' }}>
                   {JSON.stringify(mapData, null, 2)}
                 </pre>
-                <button 
-                  onClick={() => window.location.reload()} 
+                <button
+                  onClick={() => window.location.reload()}
                   style={{ marginTop: '10px', padding: '8px 16px' }}
                 >
                   Reload Page
@@ -342,7 +342,7 @@ function App() {
             ) : useDebugView ? (
               <SimpleMapView mapData={mapData} />
             ) : (
-              <EnhancedMapView 
+              <EnhancedMapView
                 mapData={mapData}
                 selectedWaypoint={selectedWaypoint}
                 onWaypointSelect={handleWaypointSelect}

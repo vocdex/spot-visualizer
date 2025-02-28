@@ -9,18 +9,18 @@
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   }
-  
+
   .map-canvas {
     display: block;
     width: 100%;
     height: 100%;
     cursor: grab;
   }
-  
+
   .map-canvas:active {
     cursor: grabbing;
   }
-  
+
   .map-controls {
     position: absolute;
     bottom: 15px;
@@ -29,7 +29,7 @@
     flex-direction: column;
     gap: 5px;
   }
-  
+
   .zoom-button, .reset-button {
     width: 36px;
     height: 36px;
@@ -46,18 +46,18 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;
   }
-  
+
   .zoom-button:hover, .reset-button:hover {
     background-color: #f0f0f0;
     transform: translateY(-1px);
     box-shadow: 0 3px 7px rgba(0, 0, 0, 0.15);
   }
-  
+
   .zoom-button:active, .reset-button:active {
     transform: translateY(1px);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
-  
+
   .reset-button {
     width: auto;
     height: 36px;
@@ -66,7 +66,7 @@
     font-size: 14px;
     margin-top: 5px;
   }
-  
+
   .waypoint-tooltip {
     position: absolute;
     background-color: rgba(255, 255, 255, 0.95);
@@ -81,7 +81,7 @@
     max-width: 300px;
     white-space: nowrap;
   }
-  
+
   /* Minimap in corner */
   .minimap {
     position: absolute;
@@ -95,12 +95,12 @@
     overflow: hidden;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   }
-  
+
   .minimap-canvas {
     width: 100%;
     height: 100%;
   }
-  
+
   /* Loading overlay */
   .map-loading {
     position: absolute;
@@ -114,7 +114,7 @@
     justify-content: center;
     z-index: 10;
   }
-  
+
   .map-loading-spinner {
     width: 40px;
     height: 40px;
@@ -123,7 +123,7 @@
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
-  
+
   /* Legend */
   .map-legend {
     position: absolute;
@@ -136,13 +136,13 @@
     font-size: 12px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   }
-  
+
   .legend-item {
     display: flex;
     align-items: center;
     margin-bottom: 5px;
   }
-  
+
   .legend-color {
     width: 16px;
     height: 16px;
@@ -150,25 +150,25 @@
     border-radius: 50%;
     border: 1px solid rgba(0, 0, 0, 0.2);
   }
-  
+
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
-  
+
   /* Responsive adjustments */
   @media (max-width: 768px) {
     .map-controls {
       bottom: 10px;
       right: 10px;
     }
-    
+
     .zoom-button, .reset-button {
       width: 32px;
       height: 32px;
       font-size: 16px;
     }
-    
+
     .minimap {
       width: 100px;
       height: 100px;

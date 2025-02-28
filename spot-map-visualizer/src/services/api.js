@@ -10,9 +10,9 @@ export const fetchMap = async (useAnchoring = false) => {
     console.log(`Fetching map data with useAnchoring=${useAnchoring}`);
     const url = `${API_BASE_URL}/map?use_anchoring=${useAnchoring}`;
     console.log(`Request URL: ${url}`);
-    
+
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       let errorMessage = `HTTP error! Status: ${response.status}`;
       try {
@@ -25,7 +25,7 @@ export const fetchMap = async (useAnchoring = false) => {
       }
       throw new Error(errorMessage);
     }
-    
+
     const data = await response.json();
     console.log(`Successfully retrieved map with ${data.waypoints?.length || 0} waypoints`);
     return data;

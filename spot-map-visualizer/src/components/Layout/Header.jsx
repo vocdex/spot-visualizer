@@ -2,10 +2,10 @@
 import React from 'react';
 import './Header.css';
 
-const Header = ({ 
-  useAnchoring, 
-  onAnchoringToggle, 
-  showLabels, 
+const Header = ({
+  useAnchoring,
+  onAnchoringToggle,
+  showLabels,
   onLabelToggle
 }) => {
   return (
@@ -13,7 +13,7 @@ const Header = ({
       <div className="header-brand">
         <h1>Spot Map Visualizer</h1>
       </div>
-      
+
       <div className="header-controls">
         <div className="control-item">
           <label>
@@ -25,7 +25,7 @@ const Header = ({
             Use Anchoring
           </label>
         </div>
-        
+
         <div className="control-item">
           <label>
             <input
