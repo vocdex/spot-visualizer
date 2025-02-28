@@ -3,7 +3,7 @@
 This application helps visualize and interact with Spot robot's GraphNav maps. It consists of:
 
 1. **Flask Backend**: Processes and serves GraphNav map data
-2. **React Frontend**: Provides an interactive 2D visualization of the map
+2. **React Frontend**: Provides an interactive 2D visualization of the map along with recorded waypoint snapshots(images) and Retrieval Augmented Graph (RAG) database
 
 ![Spot Map Visualizer](./spot-map-visualizer/assets/spot_visualizer.gif)
 
