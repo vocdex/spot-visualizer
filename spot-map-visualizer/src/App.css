@@ -1,21 +1,30 @@
 /* src/App.css */
+/* Global scroll prevention */
+html, body {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  position: fixed;
+}
+
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: hidden;
+  overflow: hidden; /* Prevents scrolling of the entire app */
 }
 
 .main-content {
   display: flex;
   flex: 1;
-  overflow: hidden;
+  overflow: hidden; /* Prevents scrolling of the main content area */
+  position: relative; /* Ensures proper positioning of children */
 }
 
 .map-container {
   flex: 1;
   position: relative;
-  overflow: hidden;
+  overflow: hidden; /* Ensures the map container doesn't scroll */
 }
 
 .loading, .error {
@@ -34,6 +43,20 @@
 .error {
   color: #f44336;
   font-weight: bold;
+}
+
+/* Make the sidebar scrollable independently */
+.sidebar {
+  overflow-y: auto !important; /* Overrides any other styles to ensure sidebar is scrollable */
+  overflow-x: hidden !important;
+  max-height: 100%;
+}
+
+/* Object filter panel specific styles */
+.object-filter-panel {
+  max-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 @media (max-width: 768px) {

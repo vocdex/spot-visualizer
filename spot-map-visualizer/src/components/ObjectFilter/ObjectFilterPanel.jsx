@@ -1,8 +1,11 @@
 // src/components/ObjectFilter/ObjectFilterPanel.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './ObjectFilterPanel.css';
 
 const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
+  // Track whether a click is being processed to prevent double-clicks
+  const [processingClick, setProcessingClick] = useState(false);
+  
   // Validate inputs on mount and update
   useEffect(() => {
     if (!Array.isArray(allObjects)) {
@@ -16,12 +19,21 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
     }
   }, [allObjects, filteredObjects, onObjectFilter]);
   
-  // Handle checkbox change with scroll prevention
-  const handleObjectToggle = (e, object) => {
-    // Prevent default behavior to stop page scrolling
-    e.preventDefault();
+  // Handle checkbox change with safer click handling
+  const handleObjectToggle = (event, object) => {
+    // Completely prevent default behavior and stop propagation
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    // Prevent rapid clicking
+    if (processingClick) return;
     
     try {
+      // Lock to prevent multiple concurrent updates
+      setProcessingClick(true);
+      
       console.log(`Toggling object: ${object}`);
       
       // Create a safe copy of filtered objects
@@ -38,21 +50,40 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
         console.log(`Added object: ${object}, new filtered list: ${updatedObjects}`);
       }
       
-      onObjectFilter(updatedObjects);
+      // Ensure a safe update
+      setTimeout(() => {
+        onObjectFilter(updatedObjects);
+        // Release the lock with a short delay to prevent rapid clicking
+        setTimeout(() => setProcessingClick(false), 100);
+      }, 10);
+      
     } catch (error) {
       console.error("Error toggling object filter:", error);
       // Reset filters on error
       onObjectFilter([]);
+      setProcessingClick(false);
     }
   };
   
-  // Clear all filters with scroll prevention
-  const handleClearFilters = (e) => {
-    // Prevent default behavior to stop page scrolling
-    e.preventDefault();
+  // Clear all filters with enhanced safety
+  const handleClearFilters = (event) => {
+    // Completely prevent default behavior
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     
+    // Prevent during active processing
+    if (processingClick) return;
+    
+    setProcessingClick(true);
     console.log("Clearing all filters");
-    onObjectFilter([]);
+    
+    // Use timeout to ensure clean state updates
+    setTimeout(() => {
+      onObjectFilter([]);
+      setTimeout(() => setProcessingClick(false), 100);
+    }, 10);
   };
   
   // Create safe versions of the arrays
@@ -77,6 +108,7 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
           <button 
             className="clear-filters-button" 
             onClick={handleClearFilters}
+            disabled={processingClick}
           >
             Clear All
           </button>
@@ -97,23 +129,27 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
       <div className="object-list">
         {safeAllObjects.map((object) => (
           <div key={object} className="object-item">
-            <label 
+            <div 
               className="checkbox-label"
-              onClick={(e) => {
-                // Stop propagation to prevent any parent elements from receiving the click
-                e.stopPropagation();
-              }}
+              onClick={(e) => handleObjectToggle(e, object)}
+              style={{ cursor: processingClick ? 'wait' : 'pointer' }}
             >
+              {/* Hide the actual checkbox to prevent browser defaults */}
               <input
                 type="checkbox"
                 checked={safeFilteredObjects.includes(object)}
-                onChange={(e) => handleObjectToggle(e, object)}
-                // Add this to prevent default scrolling behavior on input change
-                onClick={(e) => e.stopPropagation()}
+                onChange={() => {}} // Empty handler since we handle in the div onClick
+                style={{ opacity: 0, position: 'absolute' }}
               />
-              <span className="checkbox-custom"></span>
+              <span 
+                className="checkbox-custom" 
+                style={{ 
+                  backgroundColor: safeFilteredObjects.includes(object) ? '#2196f3' : 'white',
+                  borderColor: safeFilteredObjects.includes(object) ? '#2196f3' : '#ccc'
+                }}
+              ></span>
               <span className="object-name">{object}</span>
-            </label>
+            </div>
           </div>
         ))}
       </div>
