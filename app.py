@@ -1,5 +1,4 @@
-# app.py
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
 import argparse
@@ -127,9 +126,9 @@ class SpotMapAPI:
         """Extract all unique objects from the annotations."""
         objects = set()
         
-        for waypoint_id, ann in self.waypoint_annotations.items():
+        for _, ann in self.waypoint_annotations.items():
             if "views" in ann:
-                for view_type, view_data in ann["views"].items():
+                for _, view_data in ann["views"].items():
                     visible_objects = view_data.get("visible_objects", [])
                     # Clean and normalize object names
                     cleaned_objects = [self._clean_text(obj) for obj in visible_objects]
@@ -468,7 +467,7 @@ def get_waypoint(waypoint_id):
         if waypoint_id in api_instance.waypoint_annotations:
             ann = api_instance.waypoint_annotations[waypoint_id]
             if "views" in ann:
-                for view_type, view_data in ann["views"].items():
+                for _, view_data in ann["views"].items():
                     visible = view_data.get("visible_objects", [])
                     for obj in visible:
                         clean_obj = api_instance._clean_text(obj)
