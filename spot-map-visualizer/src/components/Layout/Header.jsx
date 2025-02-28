@@ -6,9 +6,7 @@ const Header = ({
   useAnchoring, 
   onAnchoringToggle, 
   showLabels, 
-  onLabelToggle, 
-  view3D, 
-  onViewToggle 
+  onLabelToggle
 }) => {
   return (
     <header className="app-header">
@@ -36,17 +34,6 @@ const Header = ({
               onChange={onLabelToggle}
             />
             Show Labels
-          </label>
-        </div>
-        
-        <div className="control-item">
-          <label>
-            <input
-              type="checkbox"
-              checked={!view3D}
-              onChange={onViewToggle}
-            />
-            2D View
           </label>
         </div>
       </div>

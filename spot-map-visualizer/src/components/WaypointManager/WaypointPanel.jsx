@@ -6,12 +6,14 @@ import './WaypointPanel.css';
 const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
   const [newLabel, setNewLabel] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [expandedImage, setExpandedImage] = useState(null);
   
   // Reset the edit state when waypoint changes
   useEffect(() => {
     if (waypointData) {
       setNewLabel(waypointData.label || '');
       setIsEditing(false);
+      setExpandedImage(null);
     }
   }, [waypointData]);
   
@@ -29,10 +31,14 @@ const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
     setIsEditing(false);
   };
   
-  // Format position for display
-  const formatPosition = (position) => {
-    if (!position) return 'Unknown';
-    return `X: ${position[0].toFixed(2)}, Y: ${position[1].toFixed(2)}, Z: ${position[2].toFixed(2)}`;
+  // Handle image click to expand
+  const handleImageClick = (type) => {
+    setExpandedImage(expandedImage === type ? null : type);
+  };
+  
+  // Close expanded image
+  const closeExpandedImage = () => {
+    setExpandedImage(null);
   };
   
   // If no waypoint is selected
@@ -76,10 +82,6 @@ const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
         )}
       </div>
       
-      <div className="waypoint-position">
-        <strong>Position:</strong> {formatPosition(waypointData.position)}
-      </div>
-      
       {waypointData.objects && waypointData.objects.length > 0 && (
         <div className="waypoint-objects">
           <strong>Visible Objects:</strong>
@@ -91,37 +93,51 @@ const WaypointPanel = ({ waypointData, waypointImages, onLabelUpdate }) => {
         </div>
       )}
       
-      {waypointData.snapshot_id && (
-        <div className="waypoint-snapshot">
-          <strong>Snapshot ID:</strong> {waypointData.snapshot_id}
-        </div>
-      )}
-      
+      {/* Camera view images - now at the top with thumbnails */}
       {waypointImages && (
         <div className="waypoint-images">
           <h3>Camera Views</h3>
-          <div className="image-container">
+          <div className="image-thumbnails">
             {waypointImages.left && (
-              <div className="image-box">
-                <h4>Left View</h4>
+              <div 
+                className={`image-thumbnail ${expandedImage === 'left' ? 'selected' : ''}`}
+                onClick={() => handleImageClick('left')}
+              >
                 <img 
                   src={formatImageUrl(waypointImages.left)} 
-                  alt="Left Camera View" 
-                  className="camera-image"
+                  alt="Left View" 
                 />
+                <span>Left View</span>
               </div>
             )}
             
             {waypointImages.right && (
-              <div className="image-box">
-                <h4>Right View</h4>
+              <div 
+                className={`image-thumbnail ${expandedImage === 'right' ? 'selected' : ''}`}
+                onClick={() => handleImageClick('right')}
+              >
                 <img 
                   src={formatImageUrl(waypointImages.right)} 
-                  alt="Right Camera View" 
-                  className="camera-image"
+                  alt="Right View" 
                 />
+                <span>Right View</span>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* Expanded image modal */}
+      {expandedImage && waypointImages && waypointImages[expandedImage] && (
+        <div className="expanded-image-overlay" onClick={closeExpandedImage}>
+          <div className="expanded-image-container" onClick={(e) => e.stopPropagation()}>
+            <button className="close-button" onClick={closeExpandedImage}>×</button>
+            <h3>{expandedImage === 'left' ? 'Left View' : 'Right View'}</h3>
+            <img 
+              src={formatImageUrl(waypointImages[expandedImage])}
+              alt={`${expandedImage} View`}
+              className="expanded-image"
+            />
           </div>
         </div>
       )}

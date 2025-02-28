@@ -20,27 +20,37 @@ const EnhancedMapView = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredWaypoint, setHoveredWaypoint] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [renderError, setRenderError] = useState(null);
-  
-  // Debug state
-  const [debugInfo, setDebugInfo] = useState({});
   
   // Map rendering references
   const waypointsRef = useRef({});
   const mapBoundsRef = useRef({ minX: 0, maxX: 0, minY: 0, maxY: 0 });
   
-  // Check if a waypoint should be filtered based on objects - with debug info
+  // Define colors for better maintenance
+  const colors = {
+    filtered: {
+      fill: '#FF6B00',     // Bright orange
+      stroke: '#FF3D00',   // Darker orange
+      glow: 'rgba(255, 107, 0, 0.2)',
+      edge: 'rgba(255, 107, 0, 0.8)'
+    },
+    selected: {
+      fill: 'red',
+      stroke: 'darkred'
+    },
+    normal: {
+      fill: 'rgba(30, 136, 229, 0.7)',
+      fillHover: 'rgba(100, 149, 237, 0.9)',
+      stroke: 'rgb(21, 101, 192)',
+      strokeHover: 'rgb(70, 119, 207)'
+    },
+    edge: {
+      normal: 'rgba(150, 150, 150, 0.6)'
+    }
+  };
+  
+  // Check if a waypoint should be filtered based on objects - with robust error handling
   const isWaypointFiltered = useCallback((waypoint, filteredObjects) => {
     try {
-      // Debug info
-      const debugData = {
-        waypointId: waypoint?.id || 'unknown',
-        hasObjects: Boolean(waypoint?.objects),
-        objectsCount: waypoint?.objects?.length || 0,
-        filteredCount: filteredObjects?.length || 0,
-        waypointObjects: waypoint?.objects || []
-      };
-      
       // Return false if no filter is applied or if the waypoint has no objects
       if (!filteredObjects || !Array.isArray(filteredObjects) || filteredObjects.length === 0) {
         return false;
@@ -51,34 +61,25 @@ const EnhancedMapView = ({
         return false;
       }
       
-      // If any filtered object matches any waypoint object
-      let matches = [];
+      // Check if any of the filtered objects are in this waypoint's objects
+      // Using a more explicit loop for clarity and better debugging
       for (const filteredObj of filteredObjects) {
-        for (const waypointObj of waypoint.objects) {
-          if (filteredObj === waypointObj) {
-            matches.push(filteredObj);
-          }
+        if (waypoint.objects.includes(filteredObj)) {
+          return true;
         }
       }
       
-      debugData.matches = matches;
-      
-      // Log detailed debug info for potential problem cases
-      if (matches.length > 0) {
-        console.log(`Waypoint ${waypoint.id} matched objects:`, matches);
-      }
-      
-      return matches.length > 0;
+      return false;
     } catch (error) {
       console.error("Error in isWaypointFiltered:", error, waypoint, filteredObjects);
-      setRenderError(`Error in filter: ${error.message}`);
       return false; // Fail safely
     }
   }, []);
   
-  // Check if an edge connects filtered waypoints
+  // Check if an edge connects filtered waypoints - with robust error handling
   const isEdgeHighlighted = useCallback((edge, filteredObjects, waypoints) => {
     try {
+      // Return false if no filter is applied or invalid inputs
       if (!filteredObjects || !Array.isArray(filteredObjects) || filteredObjects.length === 0) {
         return false;
       }
@@ -96,8 +97,7 @@ const EnhancedMapView = ({
              (toWaypoint && isWaypointFiltered(toWaypoint, filteredObjects));
     } catch (error) {
       console.error("Error in isEdgeHighlighted:", error, edge, filteredObjects);
-      setRenderError(`Error in edge highlight: ${error.message}`);
-      return false;
+      return false; // Fail safely
     }
   }, [isWaypointFiltered]);
   
@@ -117,7 +117,7 @@ const EnhancedMapView = ({
       maxY = Math.max(maxY, waypoint.position[1]);
     });
     
-    // Check if we have valid bounds
+    // Check if we have valid bounds (could happen if all waypoints had invalid positions)
     if (!isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY)) {
       return { minX: -10, maxX: 10, minY: -10, maxY: 10 };
     }
@@ -136,18 +136,25 @@ const EnhancedMapView = ({
   
   // Handle wheel event for zooming
   const handleWheel = useCallback((e) => {
+    // Calculate zoom factor
     const delta = -e.deltaY;
     const zoomFactor = delta > 0 ? 1.1 : 0.9;
     
+    // Calculate new scale with limits
     const newScale = Math.max(0.1, Math.min(10, scale * zoomFactor));
     
+    // Get mouse position relative to canvas
     const rect = canvasRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
+    // Update scale
     setScale(newScale);
     
+    // Calculate new world position under mouse (after theoretical zoom)
+    // This is approximate and will be refined in the next render
     setOffset(prevOffset => {
+      // Calculate offsetX and offsetY to keep the point under the mouse stable
       const dx = (mouseX - (prevOffset.x + canvasRef.current.width / 2)) * (1 - 1/zoomFactor);
       const dy = (mouseY - (prevOffset.y + canvasRef.current.height / 2)) * (1 - 1/zoomFactor);
       
@@ -163,6 +170,7 @@ const EnhancedMapView = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
     
+    // Add wheel event listener with { passive: false } option
     const handleWheelWithPrevent = (e) => {
       e.preventDefault();
       handleWheel(e);
@@ -170,6 +178,7 @@ const EnhancedMapView = ({
     
     canvas.addEventListener('wheel', handleWheelWithPrevent, { passive: false });
     
+    // Clean up
     return () => {
       canvas.removeEventListener('wheel', handleWheelWithPrevent);
     };
@@ -195,7 +204,7 @@ const EnhancedMapView = ({
     return { x: mapX, y: mapY };
   }, [scale, offset]);
   
-  // Mouse event handlers
+  // Handle mouse events
   const handleMouseDown = (e) => {
     setIsDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
@@ -208,6 +217,7 @@ const EnhancedMapView = ({
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
+    // Update dragging if active
     if (isDragging) {
       const dx = e.clientX - dragStart.x;
       const dy = e.clientY - dragStart.y;
@@ -216,10 +226,12 @@ const EnhancedMapView = ({
       return;
     }
     
+    // Waypoint hover detection
     const mapCoords = screenToMapCoordinates(mouseX, mouseY);
     let foundWaypoint = null;
     let minDistance = Infinity;
     
+    // Find the closest waypoint that's within its clickable radius
     for (const [id, wp] of Object.entries(waypointsRef.current)) {
       if (!wp || typeof wp.x !== 'number' || typeof wp.y !== 'number') continue;
       
@@ -237,19 +249,21 @@ const EnhancedMapView = ({
     
     setHoveredWaypoint(foundWaypoint);
     
+    // Update cursor
     if (canvasRef.current) {
       canvasRef.current.style.cursor = foundWaypoint ? 'pointer' : (isDragging ? 'grabbing' : 'grab');
     }
   };
   
   const handleMouseUp = (e) => {
+    // If it was a short click (not a drag) and on a waypoint, select it
     if (isDragging && hoveredWaypoint) {
       const dragDistance = Math.sqrt(
         Math.pow(e.clientX - dragStart.x, 2) + 
         Math.pow(e.clientY - dragStart.y, 2)
       );
       
-      if (dragDistance < 5) {
+      if (dragDistance < 5) {  // Consider it a click if moved less than 5px
         onWaypointSelect(hoveredWaypoint);
       }
     }
@@ -268,61 +282,9 @@ const EnhancedMapView = ({
     setOffset({ x: 0, y: 0 });
   };
   
-  // Update debug info when filtered objects change
-  useEffect(() => {
-    if (!mapData || !mapData.waypoints) return;
-    
-    // Count waypoints that match each filter object
-    if (filteredObjects && filteredObjects.length > 0) {
-      const objectCounts = {};
-      let multiMatchCount = 0;
-      
-      // For each filter object, count how many waypoints match it
-      filteredObjects.forEach(obj => {
-        objectCounts[obj] = 0;
-        
-        mapData.waypoints.forEach(waypoint => {
-          if (waypoint.objects && waypoint.objects.includes(obj)) {
-            objectCounts[obj]++;
-          }
-        });
-      });
-      
-      // Count waypoints that match multiple filter objects
-      mapData.waypoints.forEach(waypoint => {
-        if (!waypoint.objects) return;
-        
-        let matchCount = 0;
-        filteredObjects.forEach(obj => {
-          if (waypoint.objects.includes(obj)) {
-            matchCount++;
-          }
-        });
-        
-        if (matchCount > 1) {
-          multiMatchCount++;
-        }
-      });
-      
-      console.log("Filter debug info:", {
-        filteredObjects,
-        objectCounts,
-        multiMatchCount
-      });
-      
-      setDebugInfo({
-        objectCounts,
-        multiMatchCount,
-        filteredObjects: [...filteredObjects]
-      });
-    }
-  }, [filteredObjects, mapData]);
-  
   // Render the map
   useEffect(() => {
     try {
-      setRenderError(null);
-      
       // Validate required refs and data
       if (!mapData || !canvasRef.current || !containerRef.current) return;
       
@@ -330,11 +292,8 @@ const EnhancedMapView = ({
       if (!mapData.waypoints || !Array.isArray(mapData.waypoints) || 
           !mapData.edges || !Array.isArray(mapData.edges)) {
         console.error("Invalid map data structure:", mapData);
-        setRenderError("Invalid map data structure");
         return;
       }
-      
-      console.log(`Rendering map with ${filteredObjects.length} filtered objects:`, filteredObjects);
       
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
@@ -368,51 +327,18 @@ const EnhancedMapView = ({
       waypointsRef.current = {};
       
       try {
-        // Create a safe copy of the filtered objects array to prevent issues
-        const safeFilteredObjects = filteredObjects ? [...filteredObjects] : [];
-        
-        // Pre-compute filtered waypoints for consistent rendering
-        console.log(`Pre-computing filtered waypoints for ${safeFilteredObjects.length} objects`);
-        const filteredWaypointIds = new Set();
-        const filteredWaypointObjects = new Map();
-        
-        if (safeFilteredObjects.length > 0) {
-          waypoints.forEach(waypoint => {
-            try {
-              if (isWaypointFiltered(waypoint, safeFilteredObjects)) {
-                filteredWaypointIds.add(waypoint.id);
-                // Record which objects matched this waypoint
-                const matchingObjects = waypoint.objects ? 
-                  waypoint.objects.filter(obj => safeFilteredObjects.includes(obj)) : 
-                  [];
-                filteredWaypointObjects.set(waypoint.id, matchingObjects);
-              }
-            } catch (wpError) {
-              console.error(`Error checking waypoint ${waypoint?.id}:`, wpError);
-            }
-          });
-        }
-        
-        console.log(`Found ${filteredWaypointIds.size} filtered waypoints`);
-        // Log waypoints with multiple matching objects (potential trouble spots)
-        filteredWaypointObjects.forEach((objects, waypointId) => {
-          if (objects.length > 1) {
-            console.log(`Waypoint ${waypointId} matches multiple objects:`, objects);
-          }
-        });
-        
-        // Draw edges 
+        // Draw edges
         ctx.save();
         ctx.translate(effectiveOffsetX, effectiveOffsetY);
         ctx.scale(effectiveScale, effectiveScale);
         ctx.translate(-(bounds.minX + bounds.maxX) / 2, -(bounds.minY + bounds.maxY) / 2);
         
-        // Start with non-highlighted edges to put them in the background
+        // First, draw non-highlighted edges
         edges.forEach(edge => {
           if (!edge || !edge.from_position || !edge.to_position) return;
           
           try {
-            const isHighlighted = isEdgeHighlighted(edge, safeFilteredObjects, waypoints);
+            const isHighlighted = isEdgeHighlighted(edge, filteredObjects, waypoints);
             
             // Skip highlighted edges on first pass
             if (isHighlighted) return;
@@ -420,7 +346,7 @@ const EnhancedMapView = ({
             ctx.beginPath();
             ctx.moveTo(edge.from_position[0], edge.from_position[1]);
             ctx.lineTo(edge.to_position[0], edge.to_position[1]);
-            ctx.strokeStyle = 'rgba(150, 150, 150, 0.6)';
+            ctx.strokeStyle = colors.edge.normal;
             ctx.lineWidth = 1 / effectiveScale;
             ctx.stroke();
           } catch (edgeError) {
@@ -428,37 +354,48 @@ const EnhancedMapView = ({
           }
         });
         
-        // Now draw highlighted edges on top
-        if (safeFilteredObjects.length > 0) {
-          edges.forEach(edge => {
-            if (!edge || !edge.from_position || !edge.to_position) return;
+        // Then draw highlighted edges on top
+        edges.forEach(edge => {
+          if (!edge || !edge.from_position || !edge.to_position) return;
+          
+          try {
+            const isHighlighted = isEdgeHighlighted(edge, filteredObjects, waypoints);
             
-            try {
-              const isHighlighted = isEdgeHighlighted(edge, safeFilteredObjects, waypoints);
-              
-              // Only draw highlighted edges in this pass
-              if (!isHighlighted) return;
-              
-              ctx.beginPath();
-              ctx.moveTo(edge.from_position[0], edge.from_position[1]);
-              ctx.lineTo(edge.to_position[0], edge.to_position[1]);
-              ctx.strokeStyle = 'rgba(0, 150, 0, 0.8)';
-              ctx.lineWidth = 2 / effectiveScale;
-              ctx.stroke();
-            } catch (edgeError) {
-              console.error("Error drawing highlighted edge:", edgeError, edge);
+            // Skip non-highlighted edges on second pass
+            if (!isHighlighted) return;
+            
+            ctx.beginPath();
+            ctx.moveTo(edge.from_position[0], edge.from_position[1]);
+            ctx.lineTo(edge.to_position[0], edge.to_position[1]);
+            ctx.strokeStyle = colors.filtered.edge;
+            ctx.lineWidth = 2 / effectiveScale;
+            ctx.stroke();
+          } catch (edgeError) {
+            console.error("Error drawing highlighted edge:", edgeError, edge);
+          }
+        });
+        
+        // Pre-calculate filtered waypoints for consistent rendering
+        const filteredWaypointIds = new Set();
+        if (filteredObjects && filteredObjects.length > 0) {
+          waypoints.forEach(waypoint => {
+            if (isWaypointFiltered(waypoint, filteredObjects)) {
+              filteredWaypointIds.add(waypoint.id);
             }
           });
         }
         
-        // Draw waypoints
-        let drawnWaypoints = 0;
+        // First draw regular waypoints (non-filtered, non-selected)
         waypoints.forEach(waypoint => {
           if (!waypoint || !waypoint.position) return;
           
           try {
             const isFiltered = filteredWaypointIds.has(waypoint.id);
             const isSelected = waypoint.id === selectedWaypoint;
+            
+            // Skip filtered and selected waypoints on first pass
+            if (isFiltered || isSelected) return;
+            
             const isHovered = waypoint.id === hoveredWaypoint;
             
             // Calculate position
@@ -483,19 +420,9 @@ const EnhancedMapView = ({
             ctx.beginPath();
             ctx.arc(x, y, 5 / effectiveScale, 0, Math.PI * 2);
             
-            if (isSelected) {
-              ctx.fillStyle = 'red';
-              ctx.strokeStyle = 'darkred';
-              ctx.lineWidth = 2 / effectiveScale;
-            } else if (isFiltered) {
-              ctx.fillStyle = 'green';
-              ctx.strokeStyle = 'darkgreen';
-              ctx.lineWidth = 1.5 / effectiveScale;
-            } else {
-              ctx.fillStyle = isHovered ? 'rgba(100, 149, 237, 0.9)' : 'rgba(30, 136, 229, 0.7)';
-              ctx.strokeStyle = isHovered ? 'rgb(70, 119, 207)' : 'rgb(21, 101, 192)';
-              ctx.lineWidth = 1 / effectiveScale;
-            }
+            ctx.fillStyle = isHovered ? colors.normal.fillHover : colors.normal.fill;
+            ctx.strokeStyle = isHovered ? colors.normal.strokeHover : colors.normal.stroke;
+            ctx.lineWidth = 1 / effectiveScale;
             
             ctx.fill();
             ctx.stroke();
@@ -503,19 +430,149 @@ const EnhancedMapView = ({
             // Draw label if enabled and not too zoomed out
             if (showLabels && scale > 0.5 && waypoint.label) {
               ctx.font = `${12 / effectiveScale}px Arial`;
-              ctx.fillStyle = isSelected ? 'red' : (isFiltered ? 'darkgreen' : 'black');
+              ctx.fillStyle = 'black';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'bottom';
               ctx.fillText(waypoint.label, x, y - 8 / effectiveScale);
             }
-            
-            drawnWaypoints++;
           } catch (waypointError) {
             console.error("Error drawing waypoint:", waypointError, waypoint);
           }
         });
         
-        console.log(`Successfully drawn ${drawnWaypoints} waypoints`);
+        // Then draw filtered waypoints
+        waypoints.forEach(waypoint => {
+          if (!waypoint || !waypoint.position) return;
+          
+          try {
+            const isFiltered = filteredWaypointIds.has(waypoint.id);
+            const isSelected = waypoint.id === selectedWaypoint;
+            
+            // Skip non-filtered on second pass (draw selected in final pass)
+            if (!isFiltered || isSelected) return;
+            
+            const isHovered = waypoint.id === hoveredWaypoint;
+            
+            // Calculate position
+            const x = waypoint.position[0];
+            const y = waypoint.position[1];
+            
+            // Calculate screen position for tooltips
+            const screenX = (x - (bounds.minX + bounds.maxX) / 2) * effectiveScale + effectiveOffsetX;
+            const screenY = (y - (bounds.minY + bounds.maxY) / 2) * effectiveScale + effectiveOffsetY;
+            
+            // Store position for interaction
+            waypointsRef.current[waypoint.id] = {
+              x, y, 
+              screenX, screenY,
+              label: waypoint.label,
+              radius: 5 / effectiveScale,
+              data: waypoint,
+              isFiltered
+            };
+            
+            // Draw glow effect for filtered waypoints
+            ctx.beginPath();
+            ctx.arc(x, y, 10 / effectiveScale, 0, Math.PI * 2);
+            ctx.fillStyle = colors.filtered.glow;
+            ctx.fill();
+            
+            // Draw waypoint circle
+            ctx.beginPath();
+            ctx.arc(x, y, 5 / effectiveScale, 0, Math.PI * 2);
+            
+            ctx.fillStyle = colors.filtered.fill;
+            ctx.strokeStyle = colors.filtered.stroke;
+            ctx.lineWidth = 2 / effectiveScale;
+            
+            ctx.fill();
+            ctx.stroke();
+            
+            // Draw pulsing ring animation for filtered waypoints
+            if (isHovered) {
+              const time = Date.now() % 2000 / 2000; // 0 to 1 over 2 seconds
+              const pulseSize = (7 + 3 * Math.sin(time * Math.PI * 2)) / effectiveScale;
+              
+              ctx.beginPath();
+              ctx.arc(x, y, pulseSize, 0, Math.PI * 2);
+              ctx.strokeStyle = colors.filtered.fill;
+              ctx.lineWidth = 2 / effectiveScale;
+              ctx.stroke();
+            }
+            
+            // Draw label if enabled and not too zoomed out
+            if (showLabels && scale > 0.5 && waypoint.label) {
+              ctx.font = `${12 / effectiveScale}px Arial`;
+              ctx.fillStyle = isHovered ? colors.filtered.stroke : colors.filtered.fill;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(waypoint.label, x, y - 8 / effectiveScale);
+            }
+          } catch (waypointError) {
+            console.error("Error drawing filtered waypoint:", waypointError, waypoint);
+          }
+        });
+        
+        // Finally draw selected waypoint (top layer)
+        waypoints.forEach(waypoint => {
+          if (!waypoint || !waypoint.position) return;
+          
+          try {
+            const isSelected = waypoint.id === selectedWaypoint;
+            
+            // Skip non-selected on final pass
+            if (!isSelected) return;
+            
+            const isFiltered = filteredWaypointIds.has(waypoint.id);
+            const isHovered = waypoint.id === hoveredWaypoint;
+            
+            // Calculate position
+            const x = waypoint.position[0];
+            const y = waypoint.position[1];
+            
+            // Calculate screen position for tooltips
+            const screenX = (x - (bounds.minX + bounds.maxX) / 2) * effectiveScale + effectiveOffsetX;
+            const screenY = (y - (bounds.minY + bounds.maxY) / 2) * effectiveScale + effectiveOffsetY;
+            
+            // Store position for interaction
+            waypointsRef.current[waypoint.id] = {
+              x, y, 
+              screenX, screenY,
+              label: waypoint.label,
+              radius: 5 / effectiveScale,
+              data: waypoint,
+              isFiltered
+            };
+            
+            // Draw selection effect
+            ctx.beginPath();
+            ctx.arc(x, y, 12 / effectiveScale, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
+            ctx.fill();
+            
+            // Draw waypoint circle
+            ctx.beginPath();
+            ctx.arc(x, y, 5 / effectiveScale, 0, Math.PI * 2);
+            
+            ctx.fillStyle = colors.selected.fill;
+            ctx.strokeStyle = colors.selected.stroke;
+            ctx.lineWidth = 2 / effectiveScale;
+            
+            ctx.fill();
+            ctx.stroke();
+            
+            // Draw label if enabled and not too zoomed out
+            if (showLabels && scale > 0.5 && waypoint.label) {
+              ctx.font = `${12 / effectiveScale}px Arial`;
+              ctx.fillStyle = colors.selected.fill;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(waypoint.label, x, y - 8 / effectiveScale);
+            }
+          } catch (waypointError) {
+            console.error("Error drawing selected waypoint:", waypointError, waypoint);
+          }
+        });
         
         // Draw world objects (anchors) if available
         if (mapData.objects && Array.isArray(mapData.objects) && mapData.objects.length > 0) {
@@ -536,6 +593,7 @@ const EnhancedMapView = ({
               ctx.fill();
               ctx.stroke();
               
+              // Draw label if enabled
               if (showLabels && scale > 0.5 && obj.id) {
                 ctx.font = `${10 / effectiveScale}px Arial`;
                 ctx.fillStyle = 'darkgreen';
@@ -552,11 +610,9 @@ const EnhancedMapView = ({
         ctx.restore();
       } catch (renderError) {
         console.error("Error rendering map:", renderError);
-        setRenderError(`Render error: ${renderError.message}`);
       }
     } catch (error) {
       console.error("Error in map effect:", error);
-      setRenderError(`Map error: ${error.message}`);
     }
   }, [
     mapData, 
@@ -569,7 +625,8 @@ const EnhancedMapView = ({
     showLabels, 
     isEdgeHighlighted, 
     isWaypointFiltered, 
-    calculateMapBounds
+    calculateMapBounds,
+    colors
   ]);
   
   return (
@@ -591,65 +648,20 @@ const EnhancedMapView = ({
       
       <div className="map-legend">
         <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: 'rgba(30, 136, 229, 0.7)' }}></div>
+          <div className="legend-color" style={{ backgroundColor: colors.normal.fill }}></div>
           <span>Waypoint</span>
         </div>
         <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: 'red' }}></div>
+          <div className="legend-color" style={{ backgroundColor: colors.selected.fill }}></div>
           <span>Selected</span>
         </div>
         {filteredObjects.length > 0 && (
           <div className="legend-item">
-            <div className="legend-color" style={{ backgroundColor: 'green' }}></div>
+            <div className="legend-color" style={{ backgroundColor: colors.filtered.fill }}></div>
             <span>Filtered</span>
           </div>
         )}
       </div>
-      
-      {/* Debug info panel */}
-      {filteredObjects.length > 0 && (
-        <div className="debug-panel" style={{
-          position: 'absolute',
-          top: '15px',
-          left: '15px',
-          background: 'rgba(255, 255, 255, 0.9)',
-          padding: '10px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          fontSize: '12px',
-          maxWidth: '300px',
-          zIndex: 1000
-        }}>
-          <h4 style={{ margin: '0 0 5px 0' }}>Filter Debug Info</h4>
-          <div>Objects: {filteredObjects.join(', ')}</div>
-          {debugInfo.objectCounts && Object.entries(debugInfo.objectCounts).map(([obj, count]) => (
-            <div key={obj}>{obj}: {count} waypoints</div>
-          ))}
-          {debugInfo.multiMatchCount > 0 && (
-            <div style={{ fontWeight: 'bold', color: debugInfo.multiMatchCount > 0 ? 'red' : 'inherit' }}>
-              Waypoints with multiple matches: {debugInfo.multiMatchCount}
-            </div>
-          )}
-        </div>
-      )}
-      
-      {/* Render error message */}
-      {renderError && (
-        <div style={{
-          position: 'absolute',
-          bottom: '15px',
-          left: '15px',
-          background: 'rgba(255, 0, 0, 0.7)',
-          color: 'white',
-          padding: '10px',
-          borderRadius: '4px',
-          fontSize: '14px',
-          maxWidth: '80%',
-          zIndex: 1000
-        }}>
-          Render Error: {renderError}
-        </div>
-      )}
       
       {hoveredWaypoint && waypointsRef.current[hoveredWaypoint] && (
         <div 
@@ -664,7 +676,7 @@ const EnhancedMapView = ({
             <div><strong>Label:</strong> {waypointsRef.current[hoveredWaypoint].label}</div>
           )}
           {waypointsRef.current[hoveredWaypoint].isFiltered && (
-            <div><strong>Filtered:</strong> Yes</div>
+            <div className="filtered-tag">Filtered</div>
           )}
         </div>
       )}

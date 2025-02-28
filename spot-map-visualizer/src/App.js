@@ -131,7 +131,6 @@ function App() {
   // State for UI controls
   const [useAnchoring, setUseAnchoring] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
-  const [view3D, setView3D] = useState(false); // Changed default to false since we're using 2D
   
   // State for waypoint selection and filtering
   const [selectedWaypoint, setSelectedWaypoint] = useState(null);
@@ -272,26 +271,14 @@ function App() {
     setShowLabels(!showLabels);
   };
   
-  // Handle toggle of 3D/2D view
-  const handleViewToggle = () => {
-    console.log("Toggling view mode");
-    setView3D(!view3D);
-  };
-
-  // Toggle debug view
-  const toggleDebugView = () => {
-    setUseDebugView(!useDebugView);
-  };
   
   return (
     <div className="app">
-      <Header 
+     <Header 
         useAnchoring={useAnchoring} 
         onAnchoringToggle={handleAnchoringToggle}
         showLabels={showLabels}
         onLabelToggle={handleLabelToggle}
-        view3D={view3D}
-        onViewToggle={handleViewToggle}
       />
       
       <DebugPanel />

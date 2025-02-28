@@ -1,10 +1,17 @@
 // src/components/ObjectFilter/ObjectFilterPanel.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './ObjectFilterPanel.css';
 
 const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
-  // Track whether a click is being processed to prevent double-clicks
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [processingClick, setProcessingClick] = useState(false);
+  const dropdownRef = useRef(null);
+  
+  // Filter objects based on search term
+  const filteredSearchResults = allObjects.filter(object => 
+    object.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   
   // Validate inputs on mount and update
   useEffect(() => {
@@ -14,72 +21,69 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
     
     if (!Array.isArray(filteredObjects)) {
       console.warn("ObjectFilterPanel: filteredObjects is not an array", filteredObjects);
-      // Fix by setting to empty array
       onObjectFilter([]);
     }
   }, [allObjects, filteredObjects, onObjectFilter]);
   
-  // Handle checkbox change with safer click handling
+  // Handle clicks outside the dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Toggle object selection
   const handleObjectToggle = (event, object) => {
-    // Completely prevent default behavior and stop propagation
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
     
-    // Prevent rapid clicking
     if (processingClick) return;
     
     try {
-      // Lock to prevent multiple concurrent updates
       setProcessingClick(true);
       
-      console.log(`Toggling object: ${object}`);
-      
-      // Create a safe copy of filtered objects
       const updatedObjects = Array.isArray(filteredObjects) ? [...filteredObjects] : [];
       
       if (updatedObjects.includes(object)) {
-        // Remove the object if it's already filtered
         const index = updatedObjects.indexOf(object);
         updatedObjects.splice(index, 1);
-        console.log(`Removed object: ${object}, new filtered list: ${updatedObjects}`);
       } else {
-        // Add the object to the filter
         updatedObjects.push(object);
-        console.log(`Added object: ${object}, new filtered list: ${updatedObjects}`);
       }
       
-      // Ensure a safe update
       setTimeout(() => {
         onObjectFilter(updatedObjects);
-        // Release the lock with a short delay to prevent rapid clicking
         setTimeout(() => setProcessingClick(false), 100);
       }, 10);
       
     } catch (error) {
       console.error("Error toggling object filter:", error);
-      // Reset filters on error
       onObjectFilter([]);
       setProcessingClick(false);
     }
   };
   
-  // Clear all filters with enhanced safety
+  // Clear all filters
   const handleClearFilters = (event) => {
-    // Completely prevent default behavior
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
     
-    // Prevent during active processing
     if (processingClick) return;
     
     setProcessingClick(true);
-    console.log("Clearing all filters");
+    setSearchTerm('');
     
-    // Use timeout to ensure clean state updates
     setTimeout(() => {
       onObjectFilter([]);
       setTimeout(() => setProcessingClick(false), 100);
@@ -94,7 +98,6 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
   if (safeAllObjects.length === 0) {
     return (
       <div className="object-filter-panel">
-        <h2>Filter by Object</h2>
         <p className="no-objects">No objects found in the environment.</p>
       </div>
     );
@@ -103,7 +106,6 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
   return (
     <div className="object-filter-panel">
       <div className="panel-header">
-        <h2>Filter by Object</h2>
         {safeFilteredObjects.length > 0 && (
           <button 
             className="clear-filters-button" 
@@ -117,7 +119,7 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
       
       <div className="filter-description">
         {safeFilteredObjects.length === 0 ? (
-          <p>Select objects to highlight waypoints where they are visible.</p>
+          null
         ) : (
           <p>
             <strong>{safeFilteredObjects.length}</strong> object{safeFilteredObjects.length !== 1 ? 's' : ''} selected. 
@@ -126,32 +128,62 @@ const ObjectFilterPanel = ({ allObjects, filteredObjects, onObjectFilter }) => {
         )}
       </div>
       
-      <div className="object-list">
-        {safeAllObjects.map((object) => (
-          <div key={object} className="object-item">
-            <div 
-              className="checkbox-label"
-              onClick={(e) => handleObjectToggle(e, object)}
-              style={{ cursor: processingClick ? 'wait' : 'pointer' }}
-            >
-              {/* Hide the actual checkbox to prevent browser defaults */}
-              <input
-                type="checkbox"
-                checked={safeFilteredObjects.includes(object)}
-                onChange={() => {}} // Empty handler since we handle in the div onClick
-                style={{ opacity: 0, position: 'absolute' }}
-              />
-              <span 
-                className="checkbox-custom" 
-                style={{ 
-                  backgroundColor: safeFilteredObjects.includes(object) ? '#2196f3' : 'white',
-                  borderColor: safeFilteredObjects.includes(object) ? '#2196f3' : '#ccc'
-                }}
-              ></span>
-              <span className="object-name">{object}</span>
+      {/* Selected objects display */}
+      {safeFilteredObjects.length > 0 && (
+        <div className="selected-objects">
+          {safeFilteredObjects.map(object => (
+            <div key={object} className="selected-object-tag">
+              <span>{object}</span>
+              <button 
+                className="remove-object" 
+                onClick={(e) => handleObjectToggle(e, object)}
+              >
+                ×
+              </button>
             </div>
+          ))}
+        </div>
+      )}
+      
+      {/* Searchable dropdown */}
+      <div className="searchable-dropdown" ref={dropdownRef}>
+        <div 
+          className="dropdown-header"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        >
+          <input
+            type="text"
+            placeholder="Search for objects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDropdownOpen(true);
+            }}
+          />
+          <span className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}>▼</span>
+        </div>
+        
+        {isDropdownOpen && (
+          <div className="dropdown-content">
+            {filteredSearchResults.length === 0 ? (
+              <div className="no-results">No matching objects found</div>
+            ) : (
+              filteredSearchResults.map(object => (
+                <div 
+                  key={object} 
+                  className={`dropdown-item ${safeFilteredObjects.includes(object) ? 'selected' : ''}`}
+                  onClick={(e) => handleObjectToggle(e, object)}
+                >
+                  <span className="checkbox-custom">
+                    {safeFilteredObjects.includes(object) && '✓'}
+                  </span>
+                  <span className="object-name">{object}</span>
+                </div>
+              ))
+            )}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
