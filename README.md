@@ -8,20 +8,20 @@ This application helps visualize and interact with Spot robot's GraphNav maps. I
 <br />
 <p align="center"> Raw Map Visualization</p>
 <p align="center">
-  <img src="static/raw_map.png" width="500" title="Raw Map">
+  <img src="static/raw_map.png" width="700" title="Raw Map">
 </p>
 <br/>
 <br />
 <p align="center"> Object Filtered Map </p>
 <p align="center">
-  <img src="static/object_filtered.png" width="500" title="Object Filtered">
+  <img src="static/object_filtered.png" width="700" title="Object Filtered">
 </p>
 <br />
 <br />
 <p align="center" >Waypoint Details with Camera Images </p>
 
 <p align="center">
-  <img src="static/camera_views_graph.png" width="500" title="Camera Views">
+  <img src="static/camera_views_graph.png" width="700" title="Camera Views">
 </p>
 <br />
 
